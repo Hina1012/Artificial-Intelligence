@@ -1,0 +1,471 @@
+# read input file
+f = open("input.txt", 'r')
+board_size = int(f.readline().rstrip('\n'))
+play_method = f.readline().rstrip('\n')
+my_player = f.readline().rstrip('\n')
+depth = int(f.readline().rstrip('\n'))
+
+n = 1
+board_value = []
+while n <= board_size:
+    board_value.append(f.readline().split())
+    n += 1
+
+m = 1
+start_board = []
+while m <= board_size:
+    start_board.append(list(f.readline().rstrip()))
+    m += 1
+count = 0
+
+for i in range(0, board_size):
+    for j in range(0, board_size):
+        if(start_board[i][j] == '.'):
+            count += 1
+if(count < depth):
+    depth = count
+max_depth = depth
+
+directions = [(-1, 0), (0, -1), (0, 1),(1, 0)]
+
+coord_dir = lambda coord, direction: (coord[0]+direction[0], coord[1]+direction[1])
+is_valid = lambda coord: (coord[0] >= 0 and coord[0] < board_size and coord[1] >= 0 and coord[1] < board_size)
+
+if my_player == 'X':
+    opponent = 'O'
+else:
+    opponent = 'X'
+
+def boardcopy(A):
+    rt = []
+    for elem in A:
+        if isinstance(elem,list):
+            rt.append(boardcopy(elem))
+        else:
+            rt.append(elem)
+    return rt
+
+def evaluate(me, opponent, board):
+    my_score, opponent_score = 0, 0
+    i, j = 0, 0
+    for i in range(0, board_size):
+        for j in range(0, board_size):
+            if board[i][j] == me:
+                my_score += int(board_value[i][j])
+            elif board[i][j] == opponent:
+                opponent_score += int(board_value[i][j])
+
+    return my_score, opponent_score
+
+
+def generate_moves(board, player):
+        if player == 'X':
+            opp = 'O'
+        else:
+            opp = 'X'
+
+        moves = []
+        for i in range(0,board_size):
+            for j in range(0,board_size):
+                if board[i][j] == '.':
+                    moves.append((i, j))
+
+        return moves
+
+
+def generate_moves_raid(board, player):
+    if player == 'X':
+        opp = 'O'
+    else:
+        opp = 'X'
+
+    moves = []
+    raid_moves = []
+    for i in range(0, board_size):
+        for j in range(0, board_size):
+            if board[i][j] == '.':
+                moves.append((i, j))
+
+    for i in range(0, len(moves)):
+        my_piece = []
+        opp_piece = []
+        for direction in directions:
+            t = coord_dir(moves[i], direction)
+            if (not is_valid(t)):
+                continue
+            if board[t[0]][t[1]] == player:
+                my_piece.append(t)
+            if board[t[0]][t[1]] == opp:
+                opp_piece.append(t)
+        if not my_piece:
+            raid = 0
+        elif not opp_piece:
+            raid = 1
+        else:
+            raid = 2
+            raid_moves.append(moves[i])
+    return raid_moves
+
+
+def make_move(board, move, player, movetype):
+        board_copy = boardcopy(board)
+        if move is None:
+            return "NoValidMove"
+        if player == 'X':
+            opp = 'O'
+        else:
+            opp = 'X'
+
+        if movetype == 0:
+            board_copy[move[0]][move[1]] = player
+            raid = -1
+            stake = -1
+            my_piece = []
+            opp_piece = []
+            board_raid_copy = boardcopy(board_copy)
+            for direction in directions:
+                t = coord_dir(move, direction)
+                if (not is_valid(t)):
+                    continue
+                if board_copy[t[0]][t[1]] == player:
+                    my_piece.append(t)
+                if board_copy[t[0]][t[1]] == opp:
+                    opp_piece.append(t)
+            if not my_piece:
+                raid = 0
+                move_type = 1
+            elif not opp_piece:
+                raid = 1
+                move_type = 1
+            else:
+                raid = 2
+                move_type = 2
+                for item in opp_piece:
+                    board_raid_copy[item[0]][item[1]] = player
+            if (raid == 2):
+                my_score, opp_score = evaluate(player, opp, board_raid_copy)
+                board_state = board_raid_copy
+            else:
+                my_score, opp_score = evaluate(player, opp, board_copy)
+                board_state = board_copy
+            score = my_score-opp_score
+
+        if movetype == 1:
+            board_copy[move[0]][move[1]] = player
+            my_score, opp_score = evaluate(player, opp, board_copy)
+            board_state = board_copy
+
+        if movetype == 2:
+            board_copy[move[0]][move[1]] = player
+            my_piece = []
+            opp_piece = []
+            board_raid_copy = boardcopy(board_copy)
+
+            for direction in directions:
+                t = coord_dir(move, direction)
+                if (not is_valid(t)):
+                    continue
+
+                if board_copy[t[0]][t[1]] == opp:
+                    opp_piece.append(t)
+
+            for item in opp_piece:
+                board_raid_copy[item[0]][item[1]] = player
+            my_score, opp_score = evaluate(player, opp, board_raid_copy)
+            board_state = board_raid_copy
+
+        return my_score, opp_score, board_state, move, movetype
+
+
+def minimax_decision(board, depth, player):
+    val = list()
+    evalu = list()
+    moves = generate_moves(board, player)
+    i = 0
+    if player == my_player:
+        best = -99999
+    else:
+        best = 99999
+
+    best_moves = list()
+    while i < len(moves):
+        b = boardcopy(board)
+        mv = make_move(b, moves[i], player, 1)
+        b = mv[2]
+        mt = mv[4]
+        if player == my_player:
+            evalu = minimax_value(b, depth-1, opponent, moves[i])
+            val = max(evalu, best)
+        else:
+            evalu = minimax_value(b, depth-1, my_player, moves[i])
+            val = min(evalu, best)
+        best = val
+        best_moves.append([evalu, moves[i], mt])
+
+        i += 1
+
+
+    raid_moves = generate_moves_raid(board, player)
+    j = 0
+    best_moves_raid = []
+    while j < len(raid_moves):
+        b = boardcopy(board)
+        mv = make_move(b, raid_moves[j], player, 2)
+        b = mv[2]
+        mt = mv[4]
+        if player == my_player:
+            evalu = minimax_value(b, depth - 1, opponent, raid_moves[j])
+            val = max(evalu, best)
+        else:
+            evalu = minimax_value(b, depth - 1, my_player, raid_moves[j])
+            val = min(evalu, best)
+        best = val
+        best_moves_raid = [evalu, raid_moves[j], mt]
+        best_move_len = len(best_moves)
+        if(best_moves_raid):
+            for i in range(0, best_move_len):
+                if (best_moves_raid[1] in best_moves[i]):
+                    if (best_moves_raid[0] > best_moves[i][0]):
+
+                        best_moves.remove(best_moves[i])
+                        best_moves.append(best_moves_raid)
+        j += 1
+
+    return best, best_moves
+
+def minimax_value(board, depth, player, move):
+    if depth == 0:
+        outcome = evaluate(my_player, opponent, board)
+        return outcome[0] - outcome[1]
+    if player == my_player:
+        best = -99999
+    else:
+        best = 99999
+    moves = generate_moves(board, player)
+
+    i = 0
+
+    while i < len(moves):
+        b = boardcopy(board)
+        mv = make_move(b, moves[i], player, 0)
+        b = mv[2]
+        if player == my_player:
+            mval = minimax_value(b, depth - 1, opponent, moves[i])
+            val = max(mval, best)
+        else:
+            mval = minimax_value(b, depth - 1, my_player, moves[i])
+            val = min(mval, best)
+        best = val
+        i += 1
+
+    return val
+
+
+def alphabeta_decision(board, depth, player):
+
+    val = list()
+    evalu = list()
+    moves = generate_moves(board, player)
+    i = 0
+    if player == my_player:
+        best = -99999
+    else:
+        best = 99999
+
+    alpha = -99999
+    beta = 99999
+
+
+    best_moves = list()
+    while i < len(moves):
+        b = boardcopy(board)
+        mv = make_move(b, moves[i], player, 1)
+        b = mv[2]
+        mt = mv[4]
+
+        if player == my_player:
+            evalu = alphabeta_value(b, depth-1, opponent, alpha, beta, moves[i])
+            val = max(evalu[0], best)
+            alpha = max(evalu[1], alpha)
+        else:
+            evalu = alphabeta_value(b, depth-1, my_player, alpha, beta, moves[i])
+            val = min(evalu[0], best)
+            beta = min(evalu[1], beta)
+
+        best = val
+        best_moves.append([evalu[0], moves[i], mt])
+
+        i += 1
+
+    raid_moves = generate_moves_raid(board, player)
+    j = 0
+    best_moves_raid = []
+
+    while j < len(raid_moves):
+        b = boardcopy(board)
+        mv = make_move(b, raid_moves[j], player, 2)
+        b = mv[2]
+        mt = mv[4]
+
+        if player == my_player:
+            evalu = alphabeta_value(b, depth - 1, opponent, alpha, beta, raid_moves[j])
+            val = max(evalu[0], best)
+            alpha = max(evalu[1], alpha)
+        else:
+            evalu = alphabeta_value(b, depth - 1, my_player, alpha, beta, raid_moves[j])
+            val = min(evalu[0], best)
+            beta = min(evalu[1], beta)
+        best = val
+        best_moves_raid = evalu[0], raid_moves[j], mt
+        best_move_len = len(best_moves)
+        if (best_moves_raid):
+            for i in range(0, best_move_len):
+                if (best_moves_raid[1] in best_moves[i]):
+                    if (best_moves_raid[0] > best_moves[i][0]):
+                        best_moves.remove(best_moves[i])
+                        best_moves.append(best_moves_raid)
+        j += 1
+    return best, best_moves, alpha, beta
+
+def alphabeta_value(board, depth, player, alpha, beta, move):
+    if depth == 0:
+        outcome = evaluate(my_player, opponent, board)
+        return outcome[0] - outcome[1], None, None
+
+    if player == my_player:
+        best = -99999
+    else:
+        best = 99999
+    moves = generate_moves(board, player)
+    i = 0
+    while i < len(moves):
+        if alpha < beta:
+            b = boardcopy(board)
+            mv = make_move(b, moves[i], player, 0)
+            b = mv[2]
+            if player == my_player:
+                mval = alphabeta_value(b, depth - 1, opponent, alpha, beta, moves[i])
+                val = max(mval[0], best)
+                if mval[1] == None:
+                    alpha = max(alpha, mval[0])
+                else:
+                    alpha = max(alpha, mval[1])
+            else:
+                mval = alphabeta_value(b, depth - 1, my_player, alpha, beta, moves[i])
+                val = min(mval[0], best)
+                if mval[1] == None:
+                    beta = min(beta, mval[0])
+                else:
+                    beta = min(beta, mval[1])
+            best = val
+
+        else:
+            val = best
+            if player == my_player:
+                return val, alpha, beta
+            else:
+                return val, beta, alpha
+
+        i += 1
+
+    if player == my_player:
+        return val, alpha, beta
+    else:
+        return val, beta, alpha
+
+
+if play_method == "MINIMAX":
+    best_moves = minimax_decision(start_board, max_depth, my_player)[1]
+
+    if best_moves is not None:
+        best_move = best_moves[0]
+
+        i = 0
+        while i < len(best_moves):
+            if (best_moves[i][0] == best_move[0] and best_moves[i][2] == 1 and best_move[2] == 2):
+                best_move = best_moves[i]
+            elif(best_moves[i][0] > best_move[0]):
+                best_move = best_moves[i]
+            i += 1
+        minimaxboard = boardcopy(start_board)
+        m_p, o_p, next_state, player, move_type = make_move(minimaxboard, best_move[1], my_player, best_move[2])
+        x = int(best_move[1][0]) + 1
+        y = chr(best_move[1][1] + 65)
+        if (move_type == 1):
+            move_t = "Stake"
+        else:
+            move_t = "Raid"
+    else:
+        next_state = start_board
+        outcome = evaluate(my_player, opponent, start_board)
+
+    next_state_str = str()
+    i = 0
+    while i < len(next_state):
+        line = str(next_state[i]).replace('[', '')
+        line = line.replace(']', '')
+        line = line.replace(',', '')
+        line = line.replace("\'", '')
+        line = line.replace(" ", '')
+        next_state_str += line + '\n'
+        i += 1
+
+    f = open("output.txt", "w")
+    
+    f.write(y)
+    f.write(str(x))
+    f.write(" ")
+    f.write(move_t)
+    f.write("\n")
+    f.write(next_state_str)
+
+    f.close()
+
+if play_method == "ALPHABETA":
+    best_moves = alphabeta_decision(start_board, max_depth, my_player)[1]
+    if best_moves is not None:
+        best_move = best_moves[0]
+        i = 0
+        while i < len(best_moves):
+
+            if (best_moves[i][0] == best_move[0] and best_moves[i][2] == 1 and best_move[2] == 2):
+                best_move = best_moves[i]
+            elif best_moves[i][0] > best_move[0]:
+                best_move = best_moves[i]
+            i += 1
+        board = boardcopy(start_board)
+        m_p, o_p, next_state, player, move_type = make_move(board, best_move[1], my_player, best_move[2])
+
+    else:
+        next_state = start_board
+        outcome = evaluate(my_player, opponent, start_board)
+
+    next_state_str = str()
+    x = int(best_move[1][0]) + 1
+    y = chr(best_move[1][1] + 65)
+    if (move_type == 1):
+        move_t = "Stake"
+    else:
+        move_t = "Raid"
+    i = 0
+
+    while i < len(next_state):
+        line = str(next_state[i]).replace('[', '')
+        line = line.replace(']', '')
+        line = line.replace(',', '')
+        line = line.replace("\'", '')
+        line = line.replace(" ", '')
+        next_state_str += line + '\n'
+        i += 1
+    f = open("output.txt", "w")
+    f.write(y)
+    f.write(str(x))
+    f.write(" ")
+    f.write(move_t)
+    
+    f.write("\n")
+    f.write(next_state_str)
+
+    f.close()
+
+
