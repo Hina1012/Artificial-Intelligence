@@ -1,0 +1,43 @@
+Your	program	will	be	given	live	traffic	information	in	the	input.txt	file,	which	is	an	arbitrarily	large	list	of current	traveling	times	between	intersections/locations.An	example	live	traffic	data	would	be	a	list	of	intersections to	intersections	with	traveling	time	(in	minutes),	in	the	following	format	(see	below	for	the	full	specification of	input.txt):	
+JordanHome CA73/NewportCoastDr 5 
+CA73/NewportCoastDr I405/CA73 10 
+I405/CA73 I110/I405 25 
+I110/I405 I10/I110 20 
+I10/I110 I110/I405 30 
+I10/I110 I10/I405 9 
+I105/I110 I10/I110 7 
+I10/I110 StaplesCenter 3 
+	
+Traveling	time	may	not	be	the	same	for	both	directions.
+
+Beside	live	traffic	information,	Jordan	also	has	an	idea	of	how	long	it	takes	on	a	traffic-free	Sunday	from each	intersection/location	to	StaplesCenter.		Hence,	the	input.txt	file	will	also	contain	Jordan's	Sunday	traffic	estimate	of	traveling	time	from	each	location	listed	in	the	file	to	his	destination,	which	is	also	an	arbitrarily	large	list	of	intersections/locations	with	estimated	traveling	time	(in	minutes)	from	there	to	StaplesCenter	on	a	traffic-free	Sunday:	
+JordanHome 55 
+CA73/NewportCoastDr 50 
+I405/CA73 40 
+I110/I405 28 
+I10/I110 8 
+I10/I405 39 
+I105/I110 23 
+StaplesCenter 0
+	
+The program	should	write	in	output.txt	the	list	of	intersections/locations	traveled	over	in	your	solution	path,	including	the	starting	and	finishing	locations	and	the	accumulated	time	from	start	to	that	intersection/location,	in order	of	travel,	for	example:	
+JordanHome 0 
+CA73/NewportCoastDr 5 
+I405/CA73 15 
+I110/I405 40 
+I10/I110 60 
+StaplesCenter 63
+
+Full	specification	for	input.txt:	
+<ALGO> 
+<START STATE> 
+<GOAL STATE> 
+<NUMBER OF LIVE TRAFFIC LINES> 
+<… LIVE TRAFFIC LINES …> 
+<NUMBER OF SUNDAY TRAFFIC LINES> 
+<… SUNDAY TRAFFIC LINES …> 
+
+Full	specification	for	output.txt:	
+	
+Any	number	of	lines	with	the	following	format	for	each:	
+<STATE> <ACCUMULATED TRAVEL TIME FROM START TO HERE> 
